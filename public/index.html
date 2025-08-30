@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Server Performance Dashboard</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: Arial; background: #f4f4f4; padding: 20px; }
+        h2 { margin-top: 0; }
+        .card { background: #fff; padding: 20px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <h2>🖥️ Server Performance Dashboard</h2>
+    <div id="dashboard"></div>
+    <div class="card"><canvas id="cpuChart" width="400" height="100"></canvas></div>
+    <div class="card"><strong>Disk Usage:</strong> (coming soon)</div>
+<div class="card"><strong>Network Speed:</strong> (coming soon)</div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const socket = io();
+
+        const cpuData = {
+            labels: [],
+            datasets: [{
+                label: 'CPU Usage (%)',
+                data: [],
+                borderColor: 'rgba(75,192,192,1)',
+                tension: 0.1
+            }]
+        };
+
+        const config = {
+            type: 'line',
+            data: cpuData,
+            options: {
+                responsive: true,
+                animation: false,
+                scales: {
+                    x: { display: false },
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        };
+
+        const cpuChart = new Chart(document.getElementById('cpuChart'), config);
+
+        socket.on('stats', (data) => {
+            const now = new Date().toLocaleTimeString();
+
+            if (cpuChart.data.labels.length > 20) {
+                cpuChart.data.labels.shift();
+                cpuChart.data.datasets[0].data.shift();
+            }
+
+            cpuChart.data.labels.push(now);
+            cpuChart.data.datasets[0].data.push(data.cpuUsage);
+            cpuChart.update();
+
+            document.getElementById('dashboard').innerHTML = `
+                <div class="card"><strong>CPU Model:</strong> ${data.cpuModel}</div>
+                <div class="card"><strong>CPU Speed:</strong> ${data.cpuSpeed} MHz</div>
+                <div class="card"><strong>CPU Cores:</strong> ${data.cpuCores}</div>
+                <div class="card"><strong>CPU Usage:</strong> ${data.cpuUsage}%</div>
+                <div class="card"><strong>Total Memory:</strong> ${data.totalMem} MB</div>
+                <div class="card"><strong>Used Memory:</strong> ${data.usedMem} MB</div>
+                <div class="card"><strong>Free Memory:</strong> ${data.freeMem} MB</div>
+                <div class="card"><strong>OS:</strong> ${data.osType} (${data.arch})</div>
+                <div class="card"><strong>Hostname:</strong> ${data.hostname}</div>
+                <div class="card"><strong>Uptime:</strong> ${Math.floor(data.uptime / 60)} min</div>
+                <div class="card"><strong>Platform:</strong> ${data.platform}</div>
+                <div class="card"><strong>Disk Usage:</strong> (coming soon)</div>
+                <div class="card"><strong>Network Speed:</strong> (coming soon)</div>
+            `;
+        });
+    </script>
+</body>
+</html>
